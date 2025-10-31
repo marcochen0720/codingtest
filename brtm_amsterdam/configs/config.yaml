@@ -1,0 +1,120 @@
+# BRTM Amsterdam Reproduction Configuration
+
+# Data Configuration
+data:
+  city: "amsterdam"
+  # Time split: 12 months total (8 train + 1 val + 3 test)
+  time_window:
+    start_date: "2023-01-01"
+    end_date: "2023-12-31"
+    train_months: 8
+    val_months: 1
+    test_months: 3
+
+  # Inside Airbnb data URLs (update based on available data)
+  insideairbnb_base: "http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam"
+
+  # Candidate set construction
+  num_candidates: 20  # 1 positive + 19 negatives
+
+  # Similarity criteria for negative sampling
+  similarity:
+    same_neighborhood: true
+    price_tolerance: 0.3  # ±30% of listing price
+    room_type_match: true
+    capacity_tolerance: 2  # ±2 guests
+
+  # Text filtering thresholds
+  min_description_length: 50
+  min_review_length: 10
+
+  # Deduplication
+  dedup:
+    method: "minhash"  # or "simhash", "embedding"
+    similarity_threshold: 0.85
+
+# Feature Engineering
+features:
+  # Topic modeling parameters
+  topics:
+    shared_topics: 60  # Shared between D, A, B
+    description_specific: 20
+    guest_review_specific: 20
+    host_review_specific: 20
+
+  # LDA hyperparameters
+  lda:
+    alpha: 0.1  # Document-topic prior
+    eta: 0.01  # Topic-word prior
+    iterations: 1000
+    passes: 10
+    random_state: 42
+
+  # User/Listing features
+  user_features:
+    - "user_tenure_days"
+    - "user_num_reviews"
+    - "user_is_verified"
+    - "user_is_superhost"
+    - "user_is_international"
+
+  listing_features:
+    - "listing_price"
+    - "listing_rating"
+    - "listing_num_reviews"
+    - "listing_accommodates"
+    - "listing_instant_bookable"
+
+# Model Configuration
+model:
+  # BRTM variants
+  variants:
+    - "BRTM-Sample"  # With negative sampling
+    - "BRTM-SEP"     # Separate topics (no sharing)
+
+  # Logistic regression parameters
+  lr:
+    C: 1.0  # Regularization strength
+    max_iter: 1000
+    random_state: 42
+    solver: "lbfgs"
+
+  # Negative sampling (for BRTM-Sample)
+  negative_sampling:
+    ratio: 1.0  # 1:1 positive to negative
+    dynamic: true
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "HR@1"
+    - "HR@3"
+    - "HR@5"
+    - "HR@7"
+    - "MRR"
+    - "NDCG@7"
+
+  # Bootstrap for significance testing
+  bootstrap:
+    enabled: true
+    n_iterations: 1000
+    confidence_level: 0.95
+
+  # Instant Book stratification
+  instant_book_analysis: true
+
+# System Configuration
+system:
+  random_seed: 42
+  batch_size: 512
+  n_jobs: -1  # Use all CPU cores
+  cache_dir: "./cache"
+  results_dir: "./results"
+
+# Crawling Configuration (for reviews)
+crawling:
+  rate_limit: 1.0  # seconds between requests
+  max_retries: 3
+  timeout: 30
+  user_agent: "Mozilla/5.0 (compatible; Research/1.0)"
+  respect_robots_txt: true
